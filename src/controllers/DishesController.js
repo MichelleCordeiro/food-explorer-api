@@ -54,8 +54,18 @@ class DishesController {
       .orWhereLike('ingredients.name', `%${search}%`)
       .groupBy('dish_id')
       .orderBy('dishes.name')
+
+      const dishesIngredients = await knex('ingredients')
+      const dishesWithIngredients = dishes.map(dish => {
+        const dishIngredients = dishesIngredients.filter(ingredient => ingredient.dish_id === dish.id)
+
+        return {
+          ...dish,
+          dishIngredients
+        }
+      })
   
-    return response.json(dishes)
+    return response.json(dishesWithIngredients)
   }
 
   async delete(request, response) {
