@@ -2,12 +2,21 @@ const { hash, compare } = require('bcryptjs')
 const AppError = require('../utils/AppError')
 
 const sqliteConnection = require('../database/sqlite')
-const { json } = require('express')
 
 class UsersController {
   async create(request, response) {
-    const { name, email, password, isAdmin } = request.body  
-    
+    const { name, email, password, is_admin = false } = request.body
+
+    if (!name) {
+      throw new AppError('Nome obrigatório.')
+    }
+    if (!email) {
+      throw new AppError('E-mail obrigatório.')
+    }
+    if (!password) {
+      throw new AppError('Senha obrigatória.')
+    }
+
     const database = await sqliteConnection()
     const checkUserExists = await database.get('SELECT * FROM users WHERE email = (?)', [email])
 
@@ -17,16 +26,18 @@ class UsersController {
 
     const hashedPassword = await hash(password, 8)
 
-    await database.run(
-      'INSERT INTO users (name, email, password, isAdmin) VALUES (?, ?, ?, false)',
-      [name, email, hashedPassword, isAdmin]
-    )
+    await database.run('INSERT INTO users (name, email, password, is_admin) VALUES (?, ?, ?, ?)', [
+      name,
+      email,
+      hashedPassword,
+      is_admin
+    ])
 
-    return response.status(201).json()
+    return response.status(201).json({ message: 'Usuário criado com sucesso.' })
   }
 
   async update(request, response) {
-    const { name, email, password, old_password } = request.body
+    const { name, email, password, old_password, is_admin } = request.body
     const { id } = request.params
 
     const database = await sqliteConnection()
@@ -55,22 +66,32 @@ class UsersController {
       if (!checkOldPassword) {
         throw new AppError('A senha antiga não confere.')
       }
-      
+
       user.password = await hash(password, 8)
+    }
+
+    if (is_admin !== undefined && user.id !== id && !user.is_admin) {
+      throw new AppError("Você não tem permissão para atualizar o campo 'is_admin'.", 403)
+    }
+
+    if (is_admin !== undefined && user.is_admin) {
+      user.is_admin = is_admin
     }
 
     await database.run(
       `
-    UPDATE users SET 
-      name = ?, 
-      email = ?,
-      password = ?,
-      updated_at = DATETIME('now')
-    WHERE id = ?`,
-      [user.name, user.email, user.password, id]
+        UPDATE users SET
+          name = ?,
+          email = ?,
+          password = ?,
+          is_admin = ?,
+          updated_at = DATETIME('now')
+        WHERE id = ?
+      `,
+      [user.name, user.email, user.password, user.is_admin, id]
     )
-    
-    return response.json()
+
+    return response.json({ message: 'Usuário atualizado com sucesso.' })
   }
 }
 
