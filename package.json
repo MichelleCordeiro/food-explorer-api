@@ -1,16 +1,16 @@
 {
   "name": "api",
   "version": "1.0.0",
-  "description": "API desenvolvida no desafio final do Explorer = Rocketseat.",
   "main": "index.js",
   "scripts": {
     "start": "node ./src/server.js",
     "dev": "nodemon ./src/server.js",
     "migrate": "knex migrate:latest"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["API", "Rocketseat", "Explorer", "NodeJS"],
+  "author": "Michelle Sousa Cordeiro",
   "license": "ISC",
+  "description": "API desenvolvida no desafio final da formação Explorer da Rocketseat.",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "express": "^4.18.3",
