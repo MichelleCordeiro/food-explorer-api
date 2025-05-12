@@ -1,16 +1,12 @@
-exports.up = knex => knex.schema.createTable('orders', table => {
+exports.up = knex =>
+  knex.schema.createTable('orders', table => {
     table.increments('id')
-    table.integer('user_id').references('id').inTable('users').onDelete('CASCADE')
 
-    table.float('order_amount', 5, 2)
-    table
-      .enum('payment_method', ['creditCard', 'pix', 'cash'], {
-        useNative: true,
-        enumName: 'methodOfPayments'
-      })
-      .notNullable()
-    table.text('order_status').default('pending')
+    table.text('order_status').notNullable().default('pendente')
+    table.decimal('order_amount', 8, 2)
+    table.text('payment_method').notNullable()
 
+    table.integer('created_by').unsigned().references('id').inTable('users').onDelete('SET NULL')
     table.timestamp('created_at').default(knex.fn.now())
     table.timestamp('updated_at').default(knex.fn.now())
   })
