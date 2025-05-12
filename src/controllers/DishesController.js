@@ -44,7 +44,7 @@ class DishesController {
 
     await knex('dish_ingredients').insert(dishIngredients)
 
-    return response.json({ message: `${name}cadastrado(a) com sucesso.` })
+    return response.json({ message: `${name} cadastrado(a) com sucesso.` })
   }
 
   async show(request, response) {
