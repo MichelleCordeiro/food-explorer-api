@@ -5,8 +5,11 @@ const DishesController = require('../controllers/DishesController')
 const dishesRoutes = Router()
 
 const dishesController = new DishesController()
+const ensureAuthenticated = require('../middlewares/ensureAuthenticated')
 
-dishesRoutes.post('/:created_by', dishesController.create)
+dishesRoutes.use(ensureAuthenticated)
+
+dishesRoutes.post('/', dishesController.create)
 dishesRoutes.get('/', dishesController.index)
 dishesRoutes.get('/:id', dishesController.show)
 dishesRoutes.delete('/:id', dishesController.delete)

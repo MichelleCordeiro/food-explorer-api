@@ -4,7 +4,7 @@ const AppError = require('../utils/AppError')
 class DishesController {
   async create(request, response) {
     const { name, description, category, image = '', price, ingredients } = request.body
-    const { created_by } = request.params
+    const created_by = request.user.id
 
     if (!name || !category || !price) {
       throw new AppError('O nome, a categoria e o preço do item são obrigatórios.')
@@ -68,8 +68,10 @@ class DishesController {
     const { id } = request.params
 
     const dish = await knex('dishes').where({ id }).first()
-
     if (!dish) throw new AppError('Item não encontrado.')
+
+    const orderedDishes = await knex('order_items').where( 'dish_id', id ).first()
+    if (orderedDishes) throw new AppError('Item já pedido, não pode ser excluido.')
 
     await knex('dishes').where({ id }).delete()
 
@@ -159,9 +161,10 @@ class DishesController {
         category: category ?? dish.category,
         image: image ?? dish.image,
         price: price ?? dish.price,
-        updated_by: id,
+        updated_by: request.user.id,
         updated_at: knex.fn.now()
       })
+
 
     if (ingredients) {
       await knex('dish_ingredients').where({ dish_id: id }).del()

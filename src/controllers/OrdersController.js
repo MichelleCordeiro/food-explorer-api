@@ -4,8 +4,7 @@ const AppError = require('../utils/AppError')
 class OrdersController {
   async create(request, response) {
     const { payment_method, order_items } = request.body
-    // const user_id = request.user.id
-    const { user_id } = request.params
+    const user_id = request.user.id
 
     if (!order_items || !Array.isArray(order_items) || order_items.length === 0) {
       throw new AppError('É necessário incluir ao menos um prato no pedido.')
