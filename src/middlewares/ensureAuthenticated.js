@@ -10,13 +10,13 @@ function ensureAuthenticated(request, response, next) {
   }
 
   const [, token] = authHeader.split(' ')
-  console.log('token:', token);
 
   try {
-    const { sub: user_id } = verify(token, authConfig.jwt.secret)
+    const { sub: user_id, is_admin } = verify(token, authConfig.jwt.secret)
 
     request.user = {
-      id: Number(user_id)
+      id: Number(user_id),
+      is_admin: Boolean(is_admin)
     }
 
     return next()

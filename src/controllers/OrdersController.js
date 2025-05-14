@@ -54,26 +54,46 @@ class OrdersController {
   }
 
   async index(request, response) {
-    const { id } = request.params
+    const created_by = request.user.id
+    const isAdmin = request.user.is_admin
 
-    const order = await knex('orders').where({ id }).first()
-    if (!order) throw new AppError('Pedido não encontrado.')
+    let orders
+    if (isAdmin) {
+      orders = await knex('orders').orderBy('created_at', 'desc')
+    } else {
+      orders = await knex('orders').where({ created_by }).orderBy('created_at', 'desc')
+    }
 
-    const order_items = await knex('order_items')
-      .where('order_items', id)
-      .orderBy('name')
+    const orderIds = orders.map(order => order.id)
 
-    return response.json({
-      ...order,
-      order_items
+    const items = await knex('order_items')
+      .whereIn('order_id', orderIds)
+      .join('dishes', 'dishes.id', '=', 'order_items.dish_id')
+      .select(['order_items.*', 'dishes.name as dish_name', 'dishes.image'])
+
+    const result = orders.map(order => {
+      return {
+        ...order,
+        items: items.filter(item => item.order_id === order.id)
+      }
     })
+
+    return response.json(result)
   }
 
   async show(request, response) {
     const { id } = request.params
+    const user_id = request.user.id
+    const isAdmin = request.user.isAdm
 
     const order = await knex('orders').where({ id }).first()
-    if (!order) throw new AppError('Pedido não encontrado.')
+    if (!order) {
+      throw new AppError('Pedido não encontrado.')
+    }
+
+    if (!isAdmin && order.user_id !== user_id) {
+      throw new AppError('Você não tem permissão para ver esse pedido.', 403)
+    }
 
     const items = await knex('order_items')
       .where({ order_id: id })
@@ -108,14 +128,18 @@ class OrdersController {
   async update(request, response) {
     const { id } = request.params
     const { order_status, payment_method } = request.body
+    const isAdmin = request.user.is_admin
+    const validStatus = ['pendente', 'em preparo']
+    const updateData = {}
+
+    if (!isAdmin) {
+      throw new AppError('Somente administradores podem modificar status do pedido.', 403)
+    }
 
     const order = await knex('orders').where({ id }).first()
     if (!order) throw new AppError('Pedido não encontrado.')
 
-    const updateData = {}
-
     if (order_status) {
-      const validStatus = ['pendente', 'em preparo']
       if (!validStatus.includes(order_status)) {
         throw new AppError(`Status inválido. Permitidos: ${validStatus.join(', ')}`)
       }
