@@ -6,6 +6,11 @@ const sqliteConnection = require('../database/sqlite')
 class UsersController {
   async create(request, response) {
     const { name, email, password, is_admin = false } = request.body
+    const requesterIsAdmin = request.user?.is_admin ?? false
+
+    if (is_admin && !requesterIsAdmin) {
+      throw new AppError('Apenas administradores podem criar outros administradores.', 403)
+    }
 
     if (!name) {
       throw new AppError('Nome obrigatório.')
@@ -30,7 +35,7 @@ class UsersController {
       name,
       email,
       hashedPassword,
-      is_admin
+      is_admin ?? false
     ])
 
     return response.status(201).json({ message: 'Usuário criado com sucesso.' })

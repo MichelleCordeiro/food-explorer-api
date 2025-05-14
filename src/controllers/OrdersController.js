@@ -6,7 +6,7 @@ class OrdersController {
     const { payment_method, order_items } = request.body
     const user_id = request.user.id
 
-    if (!order_items || !Array.isArray(order_items) || order_items.length === 0) {
+    if (!Array.isArray(order_items) || order_items.length === 0) {
       throw new AppError('É necessário incluir ao menos um prato no pedido.')
     }
 
@@ -38,7 +38,9 @@ class OrdersController {
     const [order_id] = await knex('orders').insert({
       order_amount,
       payment_method,
-      created_by: user_id
+      order_status: 'pendente',
+      created_by: user_id,
+      updated_at: knex.fn.now()
     })
 
     const itemsInsert = processedOrderItems.map(item => {
@@ -57,19 +59,16 @@ class OrdersController {
     const created_by = request.user.id
     const isAdmin = request.user.is_admin
 
-    let orders
-    if (isAdmin) {
-      orders = await knex('orders').orderBy('created_at', 'desc')
-    } else {
-      orders = await knex('orders').where({ created_by }).orderBy('created_at', 'desc')
-    }
+    const orders = isAdmin
+      ? await knex('orders').orderBy('created_at', 'desc')
+      : await knex('orders').where({ created_by }).orderBy('created_at', 'desc')
 
     const orderIds = orders.map(order => order.id)
 
     const items = await knex('order_items')
       .whereIn('order_id', orderIds)
       .join('dishes', 'dishes.id', '=', 'order_items.dish_id')
-      .select(['order_items.*', 'dishes.name as dish_name', 'dishes.image'])
+      .select('order_items.*', 'dishes.name as dish_name', 'dishes.image')
 
     const result = orders.map(order => {
       return {
@@ -91,7 +90,7 @@ class OrdersController {
       throw new AppError('Pedido não encontrado.')
     }
 
-    if (!isAdmin && order.user_id !== user_id) {
+    if (!isAdmin && order.created_by !== user_id) {
       throw new AppError('Você não tem permissão para ver esse pedido.', 403)
     }
 
@@ -109,9 +108,14 @@ class OrdersController {
 
   async cancel(request, response) {
     const { id } = request.params
+    const user_id = request.user.id
 
     const order = await knex('orders').where({ id }).first()
     if (!order) throw new AppError('Pedido não encontrado.')
+
+    if (order.created_by !== user_id) {
+      throw new AppError('Você não pode cancelar um pedido de outro usuário.', 403)
+    }
 
     if (!['pendente'].includes(order.order_status)) {
       throw new AppError('O pedido não pode mais ser cancelado.')
@@ -129,8 +133,6 @@ class OrdersController {
     const { id } = request.params
     const { order_status, payment_method } = request.body
     const isAdmin = request.user.is_admin
-    const validStatus = ['pendente', 'em preparo']
-    const updateData = {}
 
     if (!isAdmin) {
       throw new AppError('Somente administradores podem modificar status do pedido.', 403)
@@ -139,7 +141,10 @@ class OrdersController {
     const order = await knex('orders').where({ id }).first()
     if (!order) throw new AppError('Pedido não encontrado.')
 
+    const updateData = {}
+
     if (order_status) {
+      const validStatus = ['pendente', 'em preparo', 'entregue', 'cancelado']
       if (!validStatus.includes(order_status)) {
         throw new AppError(`Status inválido. Permitidos: ${validStatus.join(', ')}`)
       }

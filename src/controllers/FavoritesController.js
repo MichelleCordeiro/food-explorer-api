@@ -7,9 +7,9 @@ class FavoritesController {
     const user_id = request.user.id
     const { dish_id } = request.body
 
-    const existFavorite = await knex('favorites').where({ user_id, dish_id }).first()
+    const existingFavorite = await knex('favorites').where({ user_id, dish_id }).first()
 
-    if (existFavorite) {
+    if (existingFavorite) {
       throw new AppError('Esse item já está nos seus favoritos.')
     }
 
@@ -25,10 +25,16 @@ class FavoritesController {
     const user_id = request.user.id
 
     const favorites = await knex('favorites')
-      .select('dishes.*', 'favorites.dish_id')
-      .innerJoin('dishes', 'dishes.id', 'favorites.dish_id')
+      .select([
+        'favorites.id',
+        'dishes.id as dish_id',
+        'dishes.name',
+        'dishes.image',
+        'dishes.price'
+      ])
+      .join('dishes', 'dishes.id', '=', 'favorites.dish_id')
       .where('favorites.user_id', user_id)
-      .orderBy('dishes.name')
+      .orderBy('favorites.id', 'desc')
 
     return response.json(favorites)
   }
@@ -36,6 +42,10 @@ class FavoritesController {
   async delete(request, response) {
     const user_id = request.user.id
     const { dish_id } = request.params
+
+    const favorite = await knex('favorites').where({ user_id, dish_id }).first()
+
+    if (!favorite) throw new AppError('Este prato não está nos seus favoritos.')
 
     await knex('favorites').where({ user_id, dish_id }).delete()
 
