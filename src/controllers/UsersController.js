@@ -75,7 +75,7 @@ class UsersController {
       user.password = await hash(password, 8)
     }
 
-    if (is_admin !== undefined && user.id !== id && !user.is_admin) {
+    if (is_admin !== undefined && user.id !== user_id && !user.is_admin) {
       throw new AppError("Você não tem permissão para atualizar o campo 'is_admin'.", 403)
     }
 

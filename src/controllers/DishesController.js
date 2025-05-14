@@ -6,11 +6,6 @@ class DishesController {
   async create(request, response) {
     const { name, description, category, image = '', price, ingredients } = request.body
     const created_by = request.user.id
-    const isAdmin = request.user.is_admin
-
-    if (!isAdmin) {
-      throw new AppError('Somente administradores podem cadastrar itens.', 403)
-    }
 
     const requiredFields = { name, category, price }
     for (const [key, value] of Object.entries(requiredFields)) {
@@ -71,11 +66,6 @@ class DishesController {
 
   async delete(request, response) {
     const { id } = request.params
-    const isAdmin = request.user.is_admin
-
-    if (!isAdmin) {
-      throw new AppError('Somente administradores podem excluir itens.', 403)
-    }
 
     const dish = await knex('dishes').where({ id }).first()
     if (!dish) throw new AppError('Item não encontrado.')
@@ -152,11 +142,6 @@ class DishesController {
     const { id } = request.params
     const { name, description, category, image, price, ingredients } = request.body
     const user_id = request.user.id
-    const isAdmin = request.user.is_admin
-
-    if (!isAdmin) {
-      throw new AppError('Somente administradores podem modificar itens.', 403)
-    }
 
     const dish = await knex('dishes').where({ id }).first()
     if (!dish) throw new AppError('Item não encontrado.')

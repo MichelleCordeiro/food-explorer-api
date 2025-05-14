@@ -83,7 +83,7 @@ class OrdersController {
   async show(request, response) {
     const { id } = request.params
     const user_id = request.user.id
-    const isAdmin = request.user.isAdm
+    const isAdmin = request.user.is_admin
 
     const order = await knex('orders').where({ id }).first()
     if (!order) {
@@ -109,15 +109,16 @@ class OrdersController {
   async cancel(request, response) {
     const { id } = request.params
     const user_id = request.user.id
+    const isAdmin = request.user.is_admin
 
     const order = await knex('orders').where({ id }).first()
     if (!order) throw new AppError('Pedido não encontrado.')
 
-    if (order.created_by !== user_id) {
+    if (!isAdmin && order.created_by !== user_id) {
       throw new AppError('Você não pode cancelar um pedido de outro usuário.', 403)
     }
 
-    if (!['pendente'].includes(order.order_status)) {
+    if (!isAdmin && !['pendente'].includes(order.order_status)) {
       throw new AppError('O pedido não pode mais ser cancelado.')
     }
 
@@ -132,11 +133,6 @@ class OrdersController {
   async update(request, response) {
     const { id } = request.params
     const { order_status, payment_method } = request.body
-    const isAdmin = request.user.is_admin
-
-    if (!isAdmin) {
-      throw new AppError('Somente administradores podem modificar status do pedido.', 403)
-    }
 
     const order = await knex('orders').where({ id }).first()
     if (!order) throw new AppError('Pedido não encontrado.')
