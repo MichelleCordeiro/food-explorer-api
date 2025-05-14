@@ -15,7 +15,3 @@ module.exports = {
     useNullAsDefault: true
   }
 }
-
-
-
-// Cadastrando nota

@@ -22,10 +22,19 @@
     "express-async-errors": "^3.1.1",
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.1.0",
+    "multer": "^1.4.5-lts.2",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
     "nodemon": "^3.1.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MichelleCordeiro/api-food-explorer.git"
+  },
+  "bugs": {
+    "url": "https://github.com/MichelleCordeiro/api-food-explorer/issues"
+  },
+  "homepage": "https://github.com/MichelleCordeiro/api-food-explorer#readme"
 }
