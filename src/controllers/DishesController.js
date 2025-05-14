@@ -1,11 +1,15 @@
 const knex = require('../database/knex')
 const AppError = require('../utils/AppError')
 const ensureIngredientsExist = require('../utils/IngredientsExist')
+const DiskStorage = require('../providers/DiskStorage')
 
 class DishesController {
   async create(request, response) {
     const { name, description, category, image = '', price, ingredients } = request.body
     const created_by = request.user.id
+
+    const dishImage = request.file.filename
+    const diskStorage = new DiskStorage()
 
     const requiredFields = { name, category, price }
     for (const [key, value] of Object.entries(requiredFields)) {
@@ -23,11 +27,13 @@ class DishesController {
       throw new AppError(`Já existe um item com o nome ${name}.`)
     }
 
+    const filename = await diskStorage.saveFile(dishImage)
+
     const [dish_id] = await knex('dishes').insert({
       name,
       description,
       category,
-      image,
+      image: filename,
       price,
       created_by,
       updated_by: created_by
@@ -72,6 +78,11 @@ class DishesController {
 
     const orderedDishes = await knex('order_items').where( 'dish_id', id ).first()
     if (orderedDishes) throw new AppError('Item já pedido, não pode ser excluido.')
+
+    const diskStorage = new DiskStorage()
+    if (dish.image) {
+      await diskStorage.deleteFile(dish.image)
+    }
 
     await knex('dishes').where({ id }).delete()
 
@@ -144,6 +155,7 @@ class DishesController {
     const user_id = request.user.id
 
     const dish = await knex('dishes').where({ id }).first()
+
     if (!dish) throw new AppError('Item não encontrado.')
 
     if (name && name !== dish.name) {
