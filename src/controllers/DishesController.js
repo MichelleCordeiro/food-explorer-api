@@ -5,11 +5,16 @@ const DiskStorage = require('../providers/DiskStorage')
 
 class DishesController {
   async create(request, response) {
-    const { name, description, category, image = '', price, ingredients } = request.body
-    const created_by = request.user.id
+    let { name, description, category, price, ingredients } = request.body
 
-    const dishImage = request.file.filename
-    const diskStorage = new DiskStorage()
+    try {
+      ingredients = JSON.parse(ingredients)
+    } catch {
+      ingredients = []
+    }
+
+    const imageFileName = request.file?.filename
+    const created_by = request.user.id
 
     const requiredFields = { name, category, price }
     for (const [key, value] of Object.entries(requiredFields)) {
@@ -27,13 +32,14 @@ class DishesController {
       throw new AppError(`Já existe um item com o nome ${name}.`)
     }
 
-    const filename = await diskStorage.saveFile(dishImage)
+    const diskStorage = new DiskStorage()
+    const savedImage = imageFileName ? await diskStorage.saveFile(imageFileName) : null
 
     const [dish_id] = await knex('dishes').insert({
       name,
       description,
       category,
-      image: filename,
+      image: savedImage,
       price,
       created_by,
       updated_by: created_by
@@ -151,11 +157,11 @@ class DishesController {
 
   async update(request, response) {
     const { id } = request.params
-    const { name, description, category, image, price, ingredients } = request.body
+    const { name, description, category, price, ingredients } = request.body
+    const imageFileName = request.file?.filename
     const user_id = request.user.id
 
     const dish = await knex('dishes').where({ id }).first()
-
     if (!dish) throw new AppError('Item não encontrado.')
 
     if (name && name !== dish.name) {
@@ -166,13 +172,23 @@ class DishesController {
       }
     }
 
+    const diskStorage = new DiskStorage()
+    let newImage = dish.image
+
+    if (imageFileName) {
+      if (dish.image) {
+        await diskStorage.deleteFile(dish.image)
+      }
+      newImage = await diskStorage.saveFile(imageFileName)
+    }
+
     await knex('dishes')
       .where({ id })
       .update({
         name: name ?? dish.name,
         description: description ?? dish.description,
         category: category ?? dish.category,
-        image: image ?? dish.image,
+        image: newImage ?? dish.image,
         price: price ?? dish.price,
         updated_by: user_id,
         updated_at: knex.fn.now()
